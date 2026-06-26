@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>H2O Shift — KPI Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root{--bg:#f7f7f5;--s:#fff;--s2:#f1f1ee;--b:rgba(0,0,0,.08);--b2:rgba(0,0,0,.14);--t:#1a1a18;--t2:#666663;--t3:#9a9a96;--g:#1D9E75;--gl:#E1F5EE;--gd:#0F6E56;--red:#E24B4A;--rl:#FCEBEB;--am:#BA7517;--r:10px;--rs:6px}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--t);font-size:14px;line-height:1.5}
+.shell{max-width:1280px;margin:0 auto;padding:24px 20px 80px}
+.hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px}
+.logo{font-size:16px;font-weight:600;letter-spacing:-.3px}.logo em{color:var(--g);font-style:normal}
+.hright{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.status{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--t2);padding:5px 10px;background:var(--s);border:.5px solid var(--b2);border-radius:20px}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--t3);flex-shrink:0}
+.dot.live{background:var(--g)}.dot.err{background:var(--red)}.dot.load{background:var(--am);animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.btn{font-size:12px;padding:5px 12px;border-radius:20px;border:.5px solid var(--b2);background:var(--s);color:var(--t2);cursor:pointer;transition:all .15s}
+.btn:hover{background:var(--s2);color:var(--t)}
+.pbar{display:flex;align-items:center;gap:6px;margin-bottom:16px;flex-wrap:wrap}
+.plbl{font-size:12px;color:var(--t3)}
+.pill{font-size:12px;padding:5px 12px;border-radius:20px;border:.5px solid var(--b2);background:var(--s);color:var(--t2);cursor:pointer;transition:all .15s;white-space:nowrap}
+.pill.on{background:var(--g);color:#fff;border-color:var(--g);font-weight:500}
+.pill:hover:not(.on){background:var(--s2)}
+.crange{display:none;align-items:center;gap:6px;flex-wrap:wrap}
+.crange.show{display:flex}
+.crange input{font-size:12px;padding:5px 10px;border:.5px solid var(--b2);border-radius:var(--rs);background:var(--s);color:var(--t)}
+.crange input:focus{outline:none;border-color:var(--g)}
+.apply{background:var(--g)!important;color:#fff!important;border-color:var(--g)!important;font-weight:500}
+.poplbl{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--t2);padding:5px 10px;background:var(--s);border:.5px solid var(--b2);border-radius:20px;cursor:pointer}
+.poplbl input{accent-color:var(--g);cursor:pointer;width:12px;height:12px}
+.sh{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.stitle{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--t2)}
+.badge{font-size:11px;font-weight:500;padding:2px 8px;border-radius:4px}
+.blive{background:var(--gl);color:var(--gd)}.bsoon{background:var(--s2);color:var(--t2)}
+.divider{border:none;border-top:.5px solid var(--b);margin:22px 0}
+.sdiv{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--t3);padding:2px 0 8px;margin-top:4px}
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:9px;margin-bottom:14px}
+.metric{background:var(--s2);border-radius:var(--rs);padding:12px 14px}
+.mlbl{font-size:11px;color:var(--t2);margin-bottom:4px}
+.mval{font-size:20px;font-weight:600;line-height:1;letter-spacing:-.4px}
+.mdelta{font-size:11px;margin-top:4px}
+.mnote{font-size:10px;color:var(--t3);margin-top:2px;font-style:italic}
+.up{color:var(--gd)}.dn{color:var(--red)}.neu{color:var(--t3)}
+.tabs{display:flex;border-bottom:.5px solid var(--b);margin-bottom:12px}
+.tab{font-size:12px;font-weight:500;padding:8px 16px;cursor:pointer;color:var(--t2);border-bottom:2px solid transparent;margin-bottom:-.5px;transition:all .15s}
+.tab.on{color:var(--g);border-bottom-color:var(--g)}
+.tab:hover:not(.on){color:var(--t);background:var(--s2)}
+.card{background:var(--s);border:.5px solid var(--b);border-radius:var(--r);padding:14px 16px;margin-bottom:10px}
+.ctitle{font-size:11px;color:var(--t2);font-weight:500;margin-bottom:6px}
+.chip{display:inline-flex;font-size:10px;color:var(--t3);background:var(--s2);border:.5px solid var(--b2);border-radius:4px;padding:2px 7px;margin-bottom:8px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:700px){.two{grid-template-columns:1fr}}
+.three{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+@media(max-width:900px){.three{grid-template-columns:1fr 1fr}}
+@media(max-width:550px){.three{grid-template-columns:1fr}}
+.tbl{background:var(--s);border:.5px solid var(--b);border-radius:var(--r);overflow:hidden;margin-bottom:10px}
+table{width:100%;border-collapse:collapse;font-size:12px}
+thead tr{background:var(--s2)}
+th{font-size:11px;font-weight:600;color:var(--t2);text-align:left;padding:9px 12px;border-bottom:.5px solid var(--b);white-space:nowrap}
+td{padding:8px 12px;border-bottom:.5px solid var(--b);color:var(--t);vertical-align:middle}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover td{background:var(--s2)}
+td.r{text-align:right;font-variant-numeric:tabular-nums}th.r{text-align:right}
+tfoot td{padding:8px 12px;border-top:1px solid var(--b2);font-weight:600;background:var(--s2)}
+tfoot td.r{text-align:right}
+.legend{display:flex;gap:12px;flex-wrap:wrap;margin-top:8px}
+.li{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--t2)}
+.lc{width:10px;height:10px;border-radius:2px;flex-shrink:0}
+.ph{background:var(--s);border:.5px dashed var(--b2);border-radius:var(--r);padding:28px;text-align:center;color:var(--t3);font-size:13px;margin-bottom:10px}
+.err{background:var(--rl);border:.5px solid var(--red);border-radius:var(--rs);padding:10px 14px;font-size:12px;color:#791F1F;margin-bottom:12px;display:none}
+.setup{background:var(--s);border:.5px solid var(--b);border-radius:var(--r);padding:28px;max-width:460px;margin:60px auto}
+.setup h3{font-size:17px;font-weight:600;margin-bottom:6px}
+.setup p{font-size:13px;color:var(--t2);margin-bottom:16px;line-height:1.5}
+.setup input{width:100%;padding:9px 12px;border:.5px solid var(--b2);border-radius:var(--rs);font-size:13px;font-family:monospace;margin-bottom:8px;background:var(--s2);color:var(--t)}
+.setup input:focus{outline:none;border-color:var(--g);box-shadow:0 0 0 3px var(--gl)}
+.go{width:100%;padding:10px;background:var(--g);color:#fff;border:none;border-radius:var(--rs);font-size:13px;font-weight:600;cursor:pointer}
+.go:hover{background:var(--gd)}
+.hint{font-size:11px;color:var(--t3);margin-top:8px;line-height:1.5}.hint a{color:var(--g)}
+.sgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-bottom:12px}
+.scard{background:var(--s);border:.5px solid var(--b);border-radius:var(--r);padding:14px 16px}
+.sname{font-size:13px;font-weight:600;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.savatar{width:26px;height:26px;border-radius:50%;color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.skpi{display:flex;justify-content:space-between;align-items:baseline;padding:4px 0;border-bottom:.5px solid var(--b);font-size:12px}
+.skpi:last-of-type{border-bottom:none}
+.skpil{color:var(--t2)}
+.skpiv{font-weight:600;font-variant-numeric:tabular-nums;display:flex;align-items:baseline;gap:3px}
+.sdelta{font-size:10px}
+/* Win rate transparency row */
+.skpi-sub{display:flex;justify-content:space-between;padding:2px 0 4px;font-size:11px;border-bottom:.5px solid var(--b)}
+.skpi-sub:last-of-type{border-bottom:none}
+.skpi-subl{color:var(--t3);padding-left:10px}
+.skpi-subv{color:var(--t3);font-variant-numeric:tabular-nums}
+.satt{margin-top:8px;padding-top:8px;border-top:.5px solid var(--b)}
+.sattlbl{font-size:10px;color:var(--t3);margin-bottom:3px}
+.sattrow{display:flex;align-items:center;gap:6px;margin-bottom:4px}
+.sattbar{flex:1;height:5px;background:var(--s2);border-radius:3px;overflow:hidden}
+.sattfill{height:100%;border-radius:3px}
+.sattpct{font-size:11px;font-weight:600;min-width:32px;text-align:right}
+.tgt{display:inline-block;min-width:60px;padding:2px 6px;border-radius:3px;border:.5px solid var(--b2);cursor:text;font-size:12px;text-align:right;background:var(--s);color:var(--t2)}
+.tgt.empty{color:var(--t3);font-style:italic}
+.tgt:focus{outline:none;border-color:var(--g);background:var(--gl);color:var(--t)}
+</style>
+</head>
+<body>
+<div id="setupScreen" class="shell" style="display:none">
+  <div class="setup">
+    <h3>H2O Shift · KPI Dashboard</h3>
+    <p>Indtast din Pipedrive API-nøgle. Gemmes kun i din browser.</p>
+    <input id="keyIn" type="password" placeholder="Pipedrive API-nøgle..." autocomplete="off" onkeydown="if(event.key==='Enter')go()">
+    <button class="go" onclick="go()">Hent live data →</button>
+    <p class="hint">Find nøglen: <a href="https://app.pipedrive.com/settings/api" target="_blank">Pipedrive → Settings → Personal preferences → API</a></p>
+  </div>
+</div>
+<div id="mainView" class="shell" style="display:none">
+  <div class="hdr">
+    <div class="logo">H2O Shift <em>/ KPI Dashboard</em></div>
+    <div class="hright">
+      <div class="status"><div class="dot" id="sdot"></div><span id="stxt">—</span></div>
+      <button class="btn" onclick="loadAll()">↻ Opdater</button>
+      <button class="btn" onclick="resetKey()" style="color:var(--t3)">Skift nøgle</button>
+    </div>
+  </div>
+  <div class="pbar">
+    <span class="plbl">Periode:</span>
+    <button class="pill" onclick="setPeriod('7d',this)">Sidste 7 dage</button>
+    <button class="pill" onclick="setPeriod('week',this)">Denne uge</button>
+    <button class="pill on" onclick="setPeriod('month',this)">Denne måned</button>
+    <button class="pill" onclick="setPeriod('quarter',this)">Dette kvartal</button>
+    <button class="pill" onclick="setPeriod('ytd',this)">ÅTD</button>
+    <button class="pill" onclick="setPeriod('custom',this)">Vælg periode ▾</button>
+    <div class="crange" id="crange">
+      <input type="date" id="cfrom"><span style="font-size:12px;color:var(--t3)">→</span><input type="date" id="cto">
+      <button class="pill apply" onclick="applyCustom()">Anvend</button>
+    </div>
+    <label class="poplbl"><input type="checkbox" id="popCk" onchange="render()"> Period-over-period</label>
+  </div>
+  <div id="errBox" class="err"></div>
+  <div class="sh"><span class="stitle">Salg — Pipedrive</span><span class="badge blive">Live</span></div>
+  <div class="sdiv">Pipeline</div><div id="mPipe" class="metrics"></div>
+  <div class="sdiv">Omsætning (vundne deals i perioden)</div><div id="mRev" class="metrics"></div>
+  <div class="sdiv">Aktiviteter</div><div id="mAct" class="metrics"></div>
+  <div class="tabs">
+    <div class="tab on" onclick="switchTab('pipeline',this)">Pipeline</div>
+    <div class="tab" onclick="switchTab('saelgere',this)">Sælgere</div>
+    <div class="tab" onclick="switchTab('aktiviteter',this)">Aktiviteter</div>
+  </div>
+  <div id="tab-pipeline">
+    <div class="two">
+      <div class="card">
+        <div class="ctitle">Pipeline pr. stage — nominel vs. vægtet</div>
+        <div class="chip">Kun H2O Shift DK · ekskl. Cold og 90-dages prøvekunder</div>
+        <div style="position:relative;height:240px"><canvas id="pipeChart"></canvas></div>
+        <div class="legend"><div class="li"><div class="lc" style="background:#1D9E75"></div>Nominel</div><div class="li"><div class="lc" style="background:#9FE1CB"></div>Vægtet</div></div>
+      </div>
+      <div class="card">
+        <div class="ctitle">Won Conversion — fra MQL til vundet</div>
+        <div class="chip">Antal deals der nåede hvert stage · periodefiltreret</div>
+        <div style="position:relative;height:240px"><canvas id="wonChart"></canvas></div>
+        <div class="legend"><div class="li"><div class="lc" style="background:#E8A838"></div>Nåede stage</div><div class="li"><div class="lc" style="background:#1D9E75"></div>Vundet</div></div>
+      </div>
+    </div>
+  </div>
+  <div id="tab-saelgere" style="display:none">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+      <div class="chip">MQL og frem · ekskl. Cold og 90-dages · sorteret efter ARR vundet</div>
+      <button class="btn" onclick="toggleTbl()" id="tblBtn">Vis tabel ▾</button>
+    </div>
+    <div id="scards"></div>
+    <div class="two" style="margin-top:12px">
+      <div class="card"><div class="ctitle">ARR vundet pr. sælger</div><div style="position:relative;height:200px"><canvas id="sArrC"></canvas></div></div>
+      <div class="card"><div class="ctitle">Pipeline pr. sælger</div><div style="position:relative;height:200px"><canvas id="sPipeC"></canvas></div></div>
+    </div>
+    <div class="two">
+      <div class="card"><div class="ctitle">Vundne aftaler + win rate</div><div style="position:relative;height:200px"><canvas id="sWonC"></canvas></div></div>
+      <div class="card">
+        <div class="ctitle">Aktiviteter pr. sælger — fordelt på type</div>
+        <div style="position:relative;height:200px"><canvas id="sActC"></canvas></div>
+        <div class="legend" id="sActLeg"></div>
+      </div>
+    </div>
+    <div id="stblWrap" style="display:none">
+      <div class="tbl"><table>
+        <thead><tr>
+          <th>Sælger</th><th class="r">Vundne</th><th class="r">Tabte</th><th class="r">ARR vundet</th><th class="r">One-time</th>
+          <th class="r">ARR target</th><th class="r">Attainment</th><th class="r">Win rate</th>
+          <th class="r">Pipeline</th><th class="r">Åbne deals</th><th class="r">Gns. åben deal</th>
+          <th class="r">Gns. procestid</th><th class="r">Aktiviteter</th><th class="r">Akt./vundet</th><th class="r">Akt. target</th>
+        </tr></thead>
+        <tbody id="stbl"></tbody><tfoot><tr id="stblFoot"></tr></tfoot>
+      </table></div>
+    </div>
+  </div>
+  <div id="tab-aktiviteter" style="display:none">
+    <div class="three">
+      <div class="card"><div class="ctitle">Pr. type</div><div style="position:relative;height:200px"><canvas id="actTypeC"></canvas></div></div>
+      <div class="card"><div class="ctitle">Pr. sælger</div><div style="position:relative;height:200px"><canvas id="actPersonC"></canvas></div></div>
+      <div class="card"><div class="ctitle">Total i perioden</div><div id="actTotal"></div></div>
+    </div>
+    <div class="tbl"><table>
+      <thead><tr><th>Sælger</th><th class="r">Follow-up</th><th class="r">Task</th><th class="r">Meeting</th><th class="r">First call</th><th class="r">Andet</th><th class="r">Total</th></tr></thead>
+      <tbody id="actTbl"></tbody><tfoot><tr id="actFoot"></tr></tfoot>
+    </table></div>
+  </div>
+  <hr class="divider">
+  <div class="sh">
+    <span class="stitle">Marketing — Meta Ads</span>
+    <span class="badge blive" style="background:#E6F1FB;color:#185FA5">Opdateret 10. jun 2026</span>
+  </div>
+  <div class="sdiv">Denne måned (1-10 jun) vs. forrige måned (maj)</div>
+  <div id="mktMetrics" class="metrics"></div>
+  <div class="tabs" id="mktTabs">
+    <div class="tab on" onclick="switchMktTab('trend',this)">Trend</div>
+    <div class="tab" onclick="switchMktTab('kampagner',this)">Kampagner</div>
+  </div>
+  <div id="mkt-trend">
+    <div class="card">
+      <div class="ctitle">Dagligt spend og leads — juni 2026</div>
+      <div style="position:relative;height:220px"><canvas id="mktTrendC"></canvas></div>
+      <div class="legend">
+        <div class="li"><div class="lc" style="background:#185FA5"></div>Spend (DKK)</div>
+        <div class="li"><div class="lc" style="background:#1D9E75"></div>Leads</div>
+      </div>
+    </div>
+  </div>
+  <div id="mkt-kampagner" style="display:none">
+    <div class="tbl"><table>
+      <thead><tr>
+        <th>Kampagne</th><th class="r">Spend (DKK)</th><th class="r">Leads</th><th class="r">CPL (DKK)</th>
+        <th class="r">Klik</th><th class="r">CTR</th><th class="r">CPM (DKK)</th><th class="r">Reach</th>
+      </tr></thead>
+      <tbody id="mktCampTbl"></tbody>
+      <tfoot><tr id="mktCampFoot"></tr></tfoot>
+    </table></div>
+  </div>
+  <hr class="divider">
+  <div class="sh"><span class="stitle">Økonomi — E-conomic / Excel</span><span class="badge bsoon">Upload aktivér</span></div>
+  <div class="metrics"><div class="metric"><div class="mlbl">Omsætning</div><div class="mval" style="font-size:15px;color:var(--t3)">—</div></div><div class="metric"><div class="mlbl">Dækningsbidrag</div><div class="mval" style="font-size:15px;color:var(--t3)">—</div></div><div class="metric"><div class="mlbl">Resultat</div><div class="mval" style="font-size:15px;color:var(--t3)">—</div></div><div class="metric"><div class="mlbl">Likviditet</div><div class="mval" style="font-size:15px;color:var(--t3)">—</div></div></div>
+  <div class="ph">Upload Excel med P&L data for at aktivere</div>
+  <hr class="divider">
+  <div class="sh"><span class="stitle">Operations — H2O Shift App</span><span class="badge bsoon">Defineres</span></div>
+  <div class="ph">KPIer defineres når dataadgang er klar</div>
+</div>
+<script>
+var EXCL=['cold','90-dages'],MQL='mql',ACOLS=['follow-up','task','meeting','first call'];
+var ACOLORS={'follow-up':'#1D9E75','task':'#5DCAA5','meeting':'#9FE1CB','first call':'#185FA5','andet':'#B4B2A9'};
+var AVATARS=['#1D9E75','#185FA5','#BA7517','#7C3AED','#E24B4A','#0891B2'];
+var TEAM=['kenny','steffen','mads','albert'];
+var KEY=localStorage.getItem('pd_key')||'',period='month',customDates=null,raw=null,meta=null,charts={},tblVisible=false;
+
+function loadT(){try{return JSON.parse(localStorage.getItem('pd_t')||'{}');}catch(e){return{};}}
+function saveT(t){localStorage.setItem('pd_t',JSON.stringify(t));}
+function getT(uid,k){var t=loadT();return(t[uid]&&t[uid][k])?t[uid][k]:0;}
+function setT(uid,k,v){var t=loadT();if(!t[uid])t[uid]={};t[uid][k]=parseFloat(String(v).replace(/[^0-9.]/g,''))||0;saveT(t);render();}
+
+window.onload=function(){if(KEY){showMain();loadAll();}else document.getElementById('setupScreen').style.display='block';};
+function go(){var k=document.getElementById('keyIn').value.trim();if(!k)return;KEY=k;localStorage.setItem('pd_key',k);showMain();loadAll();}
+function showMain(){document.getElementById('setupScreen').style.display='none';document.getElementById('mainView').style.display='block';}
+function resetKey(){localStorage.removeItem('pd_key');KEY='';location.reload();}
+function setStatus(s,t){document.getElementById('sdot').className='dot '+s;document.getElementById('stxt').textContent=t;}
+function showErr(m){var e=document.getElementById('errBox');if(m){e.textContent=m;e.style.display='block';}else{e.style.display='none';}}
+
+async function pdFetch(ep,params){
+  params=params||{};
+  var p=Object.assign({api_token:KEY,limit:'500'},params);
+  var qs=Object.keys(p).map(function(k){return k+'='+encodeURIComponent(p[k]);}).join('&');
+  var r=await fetch('https://api.pipedrive.com/v1/'+ep+'?'+qs);
+  if(!r.ok)throw new Error('HTTP '+r.status);
+  var d=await r.json();
+  if(!d.success)throw new Error(d.error||'API fejl');
+  return d;
+}
+async function pdAll(ep,params){
+  params=params||{};
+  var all=[],start=0;
+  while(true){
+    var pp=Object.assign({},params,{start:String(start)});
+    var d=await pdFetch(ep,pp);
+    if(d.data)all=all.concat(Array.isArray(d.data)?d.data:[]);
+    if(!d.additional_data||!d.additional_data.pagination||!d.additional_data.pagination.more_items_in_collection)break;
+    start+=500;if(start>20000)break;
+  }
+  return all;
+}
+
+async function loadAll(){
+  setStatus('load','Henter...');showErr(null);
+  try{
+    var results=await Promise.all([
+      pdAll('users'),
+      pdAll('deals',{status:'all_not_deleted'}),
+      pdAll('stages'),
+      pdAll('dealFields').catch(function(){return[];})
+    ]);
+    var users=results[0],deals=results[1],stages=results[2],fields=results[3];
+    var arrKey=null;
+    for(var i=0;i<fields.length;i++){if(fields[i].name&&fields[i].name.toLowerCase()==='arr'){arrKey=fields[i].key;break;}}
+    var stageMap={};
+    stages.forEach(function(s){stageMap[s.id]={name:s.name,ord:s.order_nr||0,prob:s.deal_probability!=null?s.deal_probability:100,pipeId:String(s.pipeline_id)};});
+    var pipeCounts={};
+    // Only count open deals for pipeline detection - won/lost deals may have misleading stage assignments
+    deals.filter(function(d){return d.status==='open';}).forEach(function(d){var st=stageMap[d.stage_id];if(st)pipeCounts[st.pipeId]=(pipeCounts[st.pipeId]||0)+1;});
+    // Fallback: if no open deals, count all
+    if(Object.keys(pipeCounts).length===0){deals.forEach(function(d){var st=stageMap[d.stage_id];if(st)pipeCounts[st.pipeId]=(pipeCounts[st.pipeId]||0)+1;});}
+    var mainPipeId=Object.keys(pipeCounts).sort(function(a,b){return pipeCounts[b]-pipeCounts[a];})[0]||'';
+    var mqlOrd=0;
+    stages.forEach(function(s){if(s.name.toLowerCase()===MQL&&String(s.pipeline_id)===mainPipeId)mqlOrd=s.order_nr||0;});
+    // Hent aktiviteter per bruger — omgår Pipedrives globale limit
+    var activeUsers=users.filter(function(u){return u.active_flag;});
+    var actsMap={};
+    for(var ui=0;ui<activeUsers.length;ui++){
+      var ua=await pdAll('activities',{done:'1',user_id:String(activeUsers[ui].id)});
+      ua.forEach(function(a){actsMap[a.id]=a;});
+    }
+    var acts=Object.values(actsMap);
+    console.log('Acts total:',acts.length);
+    raw={users:users,deals:deals,stages:stages,acts:acts};
+    meta={mainPipeId:mainPipeId,mqlOrd:mqlOrd,arrKey:arrKey,stageMap:stageMap};
+    setStatus('live','Live · '+new Date().toLocaleTimeString('da-DK',{hour:'2-digit',minute:'2-digit'}));
+    render();
+  }catch(e){setStatus('err','Fejl');showErr('Kunne ikke hente data: '+e.message);console.error(e);}
+}
+
+function setPeriod(p,el){
+  period=p;
+  document.querySelectorAll('.pbar .pill').forEach(function(b){b.classList.remove('on');});
+  el.classList.add('on');
+  var cr=document.getElementById('crange');
+  if(p==='custom'){cr.classList.add('show');return;}
+  cr.classList.remove('show');render();
+}
+function applyCustom(){
+  var f=document.getElementById('cfrom').value,t=document.getElementById('cto').value;
+  if(!f||!t){alert('Vælg både fra- og til-dato');return;}
+  customDates={s:f,e:t};render();
+}
+function getDates(){
+  if(period==='custom'&&customDates)return{s:customDates.s,e:customDates.e,ps:null,pe:null};
+  var now=new Date(),y=now.getFullYear(),m=now.getMonth();
+  function fmt(d){return d.toISOString().split('T')[0];}
+  var today=fmt(now);
+  if(period==='7d'){var s7=new Date(now);s7.setDate(s7.getDate()-6);var ps7=new Date(now);ps7.setDate(ps7.getDate()-13);var pe7=new Date(now);pe7.setDate(pe7.getDate()-7);return{s:fmt(s7),e:today,ps:fmt(ps7),pe:fmt(pe7)};}
+  if(period==='week'){var dow=(now.getDay()||7)-1;var mon=new Date(now);mon.setDate(now.getDate()-dow);var sun=new Date(mon);sun.setDate(mon.getDate()+6);var pmon=new Date(mon);pmon.setDate(mon.getDate()-7);var psun=new Date(sun);psun.setDate(sun.getDate()-7);return{s:fmt(mon),e:fmt(sun),ps:fmt(pmon),pe:fmt(psun)};}
+  var s,e,ps,pe;
+  if(period==='month'){s=new Date(y,m,1);e=new Date(y,m+1,0);ps=new Date(y,m-1,1);pe=new Date(y,m,0);}
+  else if(period==='quarter'){var q=Math.floor(m/3);s=new Date(y,q*3,1);e=new Date(y,q*3+3,0);ps=new Date(y,(q-1)*3,1);pe=new Date(y,q*3,0);}
+  else{s=new Date(y,0,1);e=new Date(y,11,31);ps=new Date(y-1,0,1);pe=new Date(y-1,11,31);}
+  return{s:fmt(s),e:fmt(e),ps:fmt(ps),pe:fmt(pe)};
+}
+
+function inR(dt,s,e){if(!dt||!s||!e)return false;var d=String(dt).split('T')[0];return d>=s&&d<=e;}
+function isExcl(n){return EXCL.some(function(x){return n.toLowerCase().indexOf(x)>=0;});}
+function isMain(st){return st&&String(st.pipeId)===String(meta.mainPipeId);}
+function isValid(st){return st&&isMain(st)&&!isExcl(st.name)&&st.ord>=meta.mqlOrd;}
+function getARR(d){return meta.arrKey?(parseFloat(d[meta.arrKey])||0):0;}
+function getOT(d){return Math.max((d.value||0)-getARR(d),0);}
+function actDate(a){
+  if(a.marked_as_done_time&&a.marked_as_done_time.length>5)return a.marked_as_done_time;
+  if(a.update_time&&a.update_time.length>5)return a.update_time;
+  return a.due_date||'';
+}
+function activeInPeriod(d,s,e){
+  var added=String(d.add_time||'').split('T')[0];
+  if(added>e)return false;
+  if(d.status==='open')return true;
+  return String(d.won_time||d.lost_time||'').split('T')[0]>=s;
+}
+function fmtK(n){return new Intl.NumberFormat('da-DK').format(Math.round(n||0));}
+function fmtS(n){if(n>=1e6)return(n/1e6).toFixed(1)+'M';if(n>=1e3)return Math.round(n/1e3)+'K';return String(Math.round(n||0));}
+function fmtDays(d){if(d===null)return'—';if(d<1)return'<1 dag';if(d<30)return Math.round(d)+' dage';if(d<365){var mo=Math.round(d/30.4);return mo+' mdr';}return(d/365).toFixed(1)+' år';}
+function delta(c,p){if(!p||p===0)return{cls:'neu',lbl:'—',arr:''};var pct=Math.round((c-p)/p*100);return{cls:pct>=0?'up':'dn',lbl:(pct>=0?'+':'')+pct+'%',arr:pct>=0?'↑':'↓'};}
+function attColor(pct){return pct>=100?'var(--gd)':pct>=70?'var(--am)':'var(--red)';}
+function initials(n){return n.split(' ').slice(0,2).map(function(w){return w[0];}).join('').toUpperCase();}
+function isPop(){return document.getElementById('popCk').checked;}
+function mkMetric(lbl,val,dt,note){
+  var dh=isPop()&&dt&&dt.lbl!=='—'?'<div class="mdelta '+dt.cls+'">'+dt.arr+' '+dt.lbl+' vs forrige</div>':'';
+  var nh=note?'<div class="mnote">'+note+'</div>':'';
+  return'<div class="metric"><div class="mlbl">'+lbl+'</div><div class="mval">'+val+'</div>'+dh+nh+'</div>';
+}
+
+// Beregn gns. dage et deal har været åbent
+// Bruger add_time → won_time/lost_time/i dag
+function avgLeadTime(dealList){
+  if(!dealList.length)return null;
+  var today=new Date();
+  var total=dealList.reduce(function(s,d){
+    var start=new Date(d.add_time||d.add_time);
+    var end=d.won_time?new Date(d.won_time):d.lost_time?new Date(d.lost_time):today;
+    var days=(end-start)/(1000*60*60*24);
+    return s+(days>0?days:0);
+  },0);
+  return total/dealList.length;
+}
+
+function render(){
+  if(!raw||!meta)return;
+  var dt=getDates();
+  var users=raw.users,deals=raw.deals,stages=raw.stages,acts=raw.acts,sm=meta.stageMap;
+
+  var pipePeriod=deals.filter(function(d){return isValid(sm[d.stage_id])&&activeInPeriod(d,dt.s,dt.e);});
+  var pipePrev=dt.ps?deals.filter(function(d){return isValid(sm[d.stage_id])&&activeInPeriod(d,dt.ps,dt.pe);}):[];
+  var newPipe=deals.filter(function(d){var st=sm[d.stage_id];return st&&isMain(st)&&!isExcl(st.name)&&inR(d.add_time,dt.s,dt.e);});
+  var newPipeP=dt.ps?deals.filter(function(d){var st=sm[d.stage_id];return st&&isMain(st)&&!isExcl(st.name)&&inR(d.add_time,dt.ps,dt.pe);}):[];
+  var won=deals.filter(function(d){var st=sm[d.stage_id];var inMainPipe=st?isMain(st):(String(d.pipeline_id)===String(meta.mainPipeId));var notExcl=st?!isExcl(st.name):true;return d.status==='won'&&(inR(d.won_time,dt.s,dt.e)||inR(d.close_time,dt.s,dt.e))&&inMainPipe&&notExcl;});
+  var wonP=dt.ps?deals.filter(function(d){var st=sm[d.stage_id];var inMainPipe=st?isMain(st):(String(d.pipeline_id)===String(meta.mainPipeId));var notExcl=st?!isExcl(st.name):true;return d.status==='won'&&(inR(d.won_time,dt.ps,dt.pe)||inR(d.close_time,dt.ps,dt.pe))&&inMainPipe&&notExcl;}):[];
+  var lost=deals.filter(function(d){var st=sm[d.stage_id];var inMainPipe=st?isMain(st):(String(d.pipeline_id)===String(meta.mainPipeId));var notExcl=st?!isExcl(st.name):true;return d.status==='lost'&&inR(d.lost_time,dt.s,dt.e)&&inMainPipe&&notExcl;});
+  var lostP=dt.ps?deals.filter(function(d){var st=sm[d.stage_id];var inMainPipe=st?isMain(st):(String(d.pipeline_id)===String(meta.mainPipeId));var notExcl=st?!isExcl(st.name):true;return d.status==='lost'&&inR(d.lost_time,dt.ps,dt.pe)&&inMainPipe&&notExcl;}):[];
+  var pActs=acts.filter(function(a){return inR(actDate(a),dt.s,dt.e);});
+  var pActsP=dt.ps?acts.filter(function(a){return inR(actDate(a),dt.ps,dt.pe);}):[];
+
+  var pv=pipePeriod.reduce(function(s,d){return s+(d.value||0);},0);
+  var pvP=pipePrev.reduce(function(s,d){return s+(d.value||0);},0);
+  var pw=pipePeriod.reduce(function(s,d){var st=sm[d.stage_id];return s+(d.value||0)*(st?st.prob:100)/100;},0);
+  var pwP=pipePrev.reduce(function(s,d){var st=sm[d.stage_id];return s+(d.value||0)*(st?st.prob:100)/100;},0);
+  var nv=newPipe.reduce(function(s,d){return s+(d.value||0);},0);
+  var nvP=newPipeP.reduce(function(s,d){return s+(d.value||0);},0);
+  var wv=won.reduce(function(s,d){return s+(d.value||0);},0);
+  var wvP=wonP.reduce(function(s,d){return s+(d.value||0);},0);
+  var at=won.reduce(function(s,d){return s+getARR(d);},0);
+  var atP=wonP.reduce(function(s,d){return s+getARR(d);},0);
+  var ot=won.reduce(function(s,d){return s+getOT(d);},0);
+  var otP=wonP.reduce(function(s,d){return s+getOT(d);},0);
+  var wr=won.length+lost.length>0?Math.round(won.length/(won.length+lost.length)*100):0;
+  var wrP=wonP.length+lostP.length>0?Math.round(wonP.length/(wonP.length+lostP.length)*100):0;
+
+  document.getElementById('mPipe').innerHTML=
+    mkMetric('Aktiv pipeline — nominel',fmtK(pv),delta(pv,pvP),'Aktive deals · MQL og frem · ekskl. Cold og 90-dg.')+
+    mkMetric('Aktiv pipeline — vægtet',fmtK(pw),delta(pw,pwP),'Nominel × stage-sandsynlighed')+
+    mkMetric('Deals i pipeline',String(pipePeriod.length),delta(pipePeriod.length,pipePrev.length))+
+    mkMetric('Ny pipeline oprettet',fmtK(nv),delta(nv,nvP),'Oprettet i perioden')+
+    mkMetric('Nye deals',String(newPipe.length),delta(newPipe.length,newPipeP.length));
+  document.getElementById('mRev').innerHTML=
+    mkMetric('Won value (DKK)',fmtK(wv),delta(wv,wvP))+
+    mkMetric('ARR vundet (DKK)',fmtK(at),delta(at,atP))+
+    mkMetric('One-time vundet (DKK)',fmtK(ot),delta(ot,otP))+
+    mkMetric('Vundne deals',String(won.length),delta(won.length,wonP.length))+
+    mkMetric('Win rate (MQL→Won)',wr+'%',delta(wr,wrP),'Baseret på vundne+tabte deals');
+  document.getElementById('mAct').innerHTML=mkMetric('Udførte aktiviteter',String(pActs.length),delta(pActs.length,pActsP.length));
+
+  renderPipeline(pipePeriod,stages,sm,deals,dt);
+  loadMarketing(dt);
+  renderSaelgere(users,pipePeriod,pipePrev,won,wonP,lost,lostP,pActs,pActsP,sm);
+  renderAktiviteter(users,pActs);
+}
+
+function renderPipeline(pipePeriod,stages,sm,allDeals,dt){
+  var mpId=meta.mainPipeId,mqlOrd=meta.mqlOrd;
+  var vs=stages.filter(function(s){return String(s.pipeline_id)===mpId&&!isExcl(s.name)&&(s.order_nr||0)>=mqlOrd;}).sort(function(a,b){return(a.order_nr||0)-(b.order_nr||0);});
+  var sa={};
+  vs.forEach(function(s){sa[s.id]={name:s.name,val:0,w:0,prob:s.deal_probability!=null?s.deal_probability:100};});
+  pipePeriod.forEach(function(d){if(sa[d.stage_id]){var v=d.value||0;sa[d.stage_id].val+=v;sa[d.stage_id].w+=v*(sa[d.stage_id].prob/100);}});
+  var pr=vs.map(function(s){return sa[s.id]||{name:s.name,val:0,w:0};});
+  if(charts.pipe){charts.pipe.destroy();charts.pipe=null;}
+  charts.pipe=new Chart(document.getElementById('pipeChart'),{type:'bar',
+    data:{labels:pr.map(function(r){return r.name;}),datasets:[
+      {label:'Nominel',data:pr.map(function(r){return Math.round(r.val);}),backgroundColor:'#1D9E75',borderRadius:4,barPercentage:.45},
+      {label:'Vægtet',data:pr.map(function(r){return Math.round(r.w);}),backgroundColor:'#9FE1CB',borderRadius:4,barPercentage:.45}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return' '+fmtK(c.raw)+' DKK';}}}},
+      scales:{x:{ticks:{font:{size:10},autoSkip:false,maxRotation:40}},y:{ticks:{callback:function(v){return fmtS(v);}}}}}});
+  var cd=allDeals.filter(function(d){
+    var st=sm[d.stage_id];if(!st||String(st.pipeId)!==mpId||isExcl(st.name)||(st.ord||0)<mqlOrd)return false;
+    var added=String(d.add_time||'').split('T')[0];if(added>dt.e)return false;
+    if(d.status==='open')return true;
+    return String(d.won_time||d.lost_time||'').split('T')[0]>=dt.s;
+  });
+  var wp=allDeals.filter(function(d){var st=sm[d.stage_id];return d.status==='won'&&(inR(d.won_time,dt.s,dt.e)||inR(d.close_time,dt.s,dt.e))&&st&&String(st.pipeId)===mpId&&!isExcl(st.name)&&st.ord>=mqlOrd;});
+  var reached=vs.map(function(cs){return cd.filter(function(d){return(sm[d.stage_id]?sm[d.stage_id].ord:0)>=cs.order_nr;}).length;});
+  var wc=wp.length,wl=vs.map(function(s){return s.name;}).concat(['Vundet']),wd=reached.concat([wc]),wcl=vs.map(function(){return'#E8A838';}).concat(['#1D9E75']);
+  if(charts.won){charts.won.destroy();charts.won=null;}
+  charts.won=new Chart(document.getElementById('wonChart'),{type:'bar',
+    data:{labels:wl,datasets:[{label:'Antal',data:wd,backgroundColor:wcl,borderRadius:4,barPercentage:.65}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{title:function(c){return c[0].label;},label:function(c){return' '+c.raw+' deals';},afterLabel:function(c){if(c.dataIndex===0)return'';var prev=wd[c.dataIndex-1],base=wd[0];return['Fra forrige:'+(prev>0?Math.round(c.raw/prev*100):0)+'%','Fra MQL:'+(base>0?Math.round(c.raw/base*100):0)+'%'];}}}},
+      scales:{x:{ticks:{font:{size:10},autoSkip:false,maxRotation:40}},y:{ticks:{precision:0},beginAtZero:true}}},
+    plugins:[{id:'wl',afterDatasetsDraw:function(chart){var ctx=chart.ctx;ctx.save();chart.getDatasetMeta(0).data.forEach(function(bar,i){var v=wd[i];if(v===0)return;ctx.fillStyle='#1a1a18';ctx.font='600 11px -apple-system,sans-serif';ctx.textAlign='center';ctx.fillText(v,bar.x,bar.y-5);if(i>0&&wd[i-1]>0){var pct=Math.round(v/wd[i-1]*100),bh=bar.base-bar.y;if(bh>16){ctx.fillStyle='rgba(255,255,255,.9)';ctx.font='600 9px -apple-system,sans-serif';ctx.fillText(pct+'%',bar.x,bar.y+12);}}});ctx.restore();}}]
+  });
+}
+
+function toggleTbl(){tblVisible=!tblVisible;document.getElementById('stblWrap').style.display=tblVisible?'block':'none';document.getElementById('tblBtn').textContent=tblVisible?'Skjul tabel ▴':'Vis tabel ▾';}
+
+function buildRow(u,pd2,wonL,lostL,actsL){
+  var uid=u.id;
+  function uid2(d){return d.user_id&&d.user_id.id?d.user_id.id:d.user_id;}
+  var myPipe=pd2.filter(function(d){return uid2(d)===uid;});
+  var myOpen=myPipe.filter(function(d){return d.status==='open';});
+  var myWon=wonL.filter(function(d){return uid2(d)===uid;});
+  var myLost=lostL.filter(function(d){return uid2(d)===uid;});
+  var myActs=actsL.filter(function(a){return a.user_id===uid;});
+  var pv=myOpen.reduce(function(s,d){return s+(d.value||0);},0);
+  var arr=myWon.reduce(function(s,d){return s+getARR(d);},0);
+  var ot=myWon.reduce(function(s,d){return s+getOT(d);},0);
+  var wc=myWon.length,lc=myLost.length;
+  var wr=wc+lc>0?Math.round(wc/(wc+lc)*100):null;
+  var avgOpen=myOpen.length>0?Math.round(pv/myOpen.length):0;
+  var acpw=wc>0?Math.round(myActs.length/wc*10)/10:null;
+  // Gns. lead procestid: alle deals tilknyttet brugeren (åbne+vundne+tabte i perioden)
+  var allMyDeals=pd2.filter(function(d){return uid2(d)===uid;});
+  var leadTime=avgLeadTime(allMyDeals);
+  var ab={};myActs.forEach(function(a){var t=(a.type||'andet').toLowerCase();ab[t]=(ab[t]||0)+1;});
+  return{uid:uid,name:u.name,pv:pv,openCnt:myOpen.length,arr:arr,ot:ot,wc:wc,lc:lc,wr:wr,avgOpen:avgOpen,acpw:acpw,ac:myActs.length,ab:ab,leadTime:leadTime};
+}
+
+function renderSaelgere(users,pipePeriod,pipePrev,won,wonP,lost,lostP,pActs,pActsP,sm){
+  var active=users.filter(function(u){return u.active_flag;});
+  var team=active.filter(function(u){return TEAM.some(function(s){return u.name.toLowerCase().indexOf(s)>=0;});});
+  var rows=team.map(function(u){var c=buildRow(u,pipePeriod,won,lost,pActs),p=buildRow(u,pipePrev,wonP,lostP,pActsP);return Object.assign({},c,{prev:p});});
+  rows.sort(function(a,b){return b.arr-a.arr;});
+
+  function ddH(c,p){if(!isPop()||!p||p===0)return'';var pct=Math.round((c-p)/p*100);var col=pct>=0?'var(--gd)':'var(--red)';return'<span class="sdelta" style="color:'+col+'">'+(pct>=0?'↑':'↓')+Math.abs(pct)+'%</span>';}
+
+  document.getElementById('scards').innerHTML='<div class="sgrid">'+rows.map(function(r,i){
+    var arrT=getT(r.uid,'arr'),acT=getT(r.uid,'ac');
+    var arrA=arrT>0?Math.round(r.arr/arrT*100):null,acA=acT>0?Math.round(r.ac/acT*100):null;
+    var bg=AVATARS[i%AVATARS.length],aRows='';
+    if(arrT)aRows+='<div class="sattrow"><span style="font-size:10px;color:var(--t3);min-width:55px">ARR</span><div class="sattbar"><div class="sattfill" style="width:'+Math.min(arrA,100)+'%;background:'+attColor(arrA)+'"></div></div><span class="sattpct" style="color:'+attColor(arrA)+'">'+arrA+'%</span></div>';
+    if(acT)aRows+='<div class="sattrow"><span style="font-size:10px;color:var(--t3);min-width:55px">Aktiviteter</span><div class="sattbar"><div class="sattfill" style="width:'+Math.min(acA,100)+'%;background:'+attColor(acA)+'"></div></div><span class="sattpct" style="color:'+attColor(acA)+'">'+acA+'%</span></div>';
+    // Win rate med diskret transparens (vundne/tabte)
+    var wrHtml='<div class="skpi"><span class="skpil">Win rate (MQL→Won)</span><span class="skpiv">'+(r.wr!==null?r.wr+'%':'—')+(r.wr!==null?ddH(r.wr,r.prev.wr):'')+'</span></div>'+
+      '<div class="skpi-sub"><span class="skpi-subl">Vundne: '+r.wc+' · Tabte: '+r.lc+'</span><span class="skpi-subv">'+(r.wc+r.lc>0?r.wc+r.lc+' afsluttede':'')+'</span></div>';
+    return'<div class="scard">'+
+      '<div class="sname"><div class="savatar" style="background:'+bg+'">'+initials(r.name)+'</div>'+r.name+'</div>'+
+      '<div class="skpi"><span class="skpil">Vundne aftaler</span><span class="skpiv">'+r.wc+ddH(r.wc,r.prev.wc)+'</span></div>'+
+      '<div class="skpi"><span class="skpil">ARR vundet</span><span class="skpiv">'+fmtK(r.arr)+' kr'+ddH(r.arr,r.prev.arr)+'</span></div>'+
+      '<div class="skpi"><span class="skpil">One-time vundet</span><span class="skpiv">'+fmtK(r.ot)+' kr'+ddH(r.ot,r.prev.ot)+'</span></div>'+
+      wrHtml+
+      '<div class="skpi"><span class="skpil">Pipeline (åbne)</span><span class="skpiv">'+fmtK(r.pv)+' kr'+ddH(r.pv,r.prev.pv)+'</span></div>'+
+      '<div class="skpi"><span class="skpil">Åbne deals</span><span class="skpiv">'+r.openCnt+ddH(r.openCnt,r.prev.openCnt)+'</span></div>'+
+      '<div class="skpi"><span class="skpil">Gns. åben deal</span><span class="skpiv">'+(r.avgOpen?fmtK(r.avgOpen)+' kr':'—')+'</span></div>'+
+      '<div class="skpi"><span class="skpil">Gns. lead procestid</span><span class="skpiv">'+fmtDays(r.leadTime)+'</span></div>'+
+      '<div class="skpi"><span class="skpil">Aktiviteter</span><span class="skpiv">'+r.ac+ddH(r.ac,r.prev.ac)+'</span></div>'+
+      '<div class="skpi"><span class="skpil">Akt. pr. vundet deal</span><span class="skpiv">'+(r.acpw!==null?r.acpw:'—')+'</span></div>'+
+      (arrT||acT?'<div class="satt"><div class="sattlbl">Targets</div>'+aRows+'</div>':'')+
+      '</div>';
+  }).join('')+'</div>';
+
+  var names=rows.map(function(r){return r.name.split(' ')[0];});
+  var bC=rows.map(function(_,i){return AVATARS[i%AVATARS.length];});
+  var bCF=bC.map(function(c){return c+'66';});
+
+  function mkBar(id,data,dataP,yFmt){
+    if(charts[id]){charts[id].destroy();charts[id]=null;}
+    var ds=[{label:'Periode',data:data,backgroundColor:bC,borderRadius:4,barPercentage:.6}];
+    if(isPop()&&dataP)ds.push({label:'Forrige',data:dataP,backgroundColor:bCF,borderRadius:4,barPercentage:.6});
+    charts[id]=new Chart(document.getElementById(id),{type:'bar',data:{labels:names,datasets:ds},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:isPop()&&!!dataP,labels:{font:{size:10},boxWidth:10}}},
+        scales:{x:{ticks:{font:{size:11}}},y:{ticks:{callback:yFmt||function(v){return v;}}}}}});
+  }
+  mkBar('sArrC',rows.map(function(r){return r.arr;}),rows.map(function(r){return r.prev.arr;}),function(v){return fmtS(v);});
+  mkBar('sPipeC',rows.map(function(r){return r.pv;}),rows.map(function(r){return r.prev.pv;}),function(v){return fmtS(v);});
+
+  if(charts.sWonC){charts.sWonC.destroy();charts.sWonC=null;}
+  var wDs=[{label:'Vundne',data:rows.map(function(r){return r.wc;}),backgroundColor:bC,borderRadius:4,barPercentage:.6,yAxisID:'y'}];
+  if(isPop())wDs.push({label:'Forrige',data:rows.map(function(r){return r.prev.wc;}),backgroundColor:bCF,borderRadius:4,barPercentage:.6,yAxisID:'y'});
+  wDs.push({label:'Win rate %',data:rows.map(function(r){return r.wr||0;}),type:'line',borderColor:'#1D9E75',backgroundColor:'transparent',pointBackgroundColor:'#1D9E75',tension:.3,yAxisID:'y2',borderWidth:2,pointRadius:4});
+  charts.sWonC=new Chart(document.getElementById('sWonC'),{type:'bar',data:{labels:names,datasets:wDs},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,labels:{font:{size:10},boxWidth:10}}},
+      scales:{x:{ticks:{font:{size:11}}},y:{ticks:{precision:0}},y2:{position:'right',min:0,max:100,ticks:{callback:function(v){return v+'%';},font:{size:9}},grid:{drawOnChartArea:false}}}}});
+
+  var aTypes=ACOLS.concat(['andet']);
+  if(charts.sActC){charts.sActC.destroy();charts.sActC=null;}
+  charts.sActC=new Chart(document.getElementById('sActC'),{type:'bar',
+    data:{labels:names,datasets:aTypes.map(function(t){return{label:t.charAt(0).toUpperCase()+t.slice(1),
+      data:rows.map(function(r){if(t==='andet')return Object.keys(r.ab).filter(function(k){return ACOLS.indexOf(k)<0;}).reduce(function(s,k){return s+r.ab[k];},0);return r.ab[t]||0;}),
+      backgroundColor:ACOLORS[t]||'#ccc',borderRadius:2,stack:'a'};})},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{stacked:true,ticks:{font:{size:11}}},y:{stacked:true,ticks:{precision:0}}}}});
+  document.getElementById('sActLeg').innerHTML=aTypes.map(function(t){return'<div class="li"><div class="lc" style="background:'+(ACOLORS[t]||'#ccc')+'"></div>'+t.charAt(0).toUpperCase()+t.slice(1)+'</div>';}).join('');
+
+  // Tabel — alle aktive brugere
+  var tRows=active.map(function(u){var r=buildRow(u,pipePeriod,won,lost,pActs);return(r.pv||r.arr||r.wc||r.ac)?r:null;}).filter(Boolean).sort(function(a,b){return b.arr-a.arr;});
+  function tgtC(uid,k){var v=getT(uid,k);return'<td class="r"><div contenteditable="true" class="tgt'+(v?'':' empty')+'" onblur="setT(\''+uid+'\',\''+k+'\',this.innerText)" onfocus="if(this.classList.contains(\'empty\'))this.innerText=\'\';this.style.borderColor=\'var(--g)\';this.style.background=\'var(--gl)\'" title="Klik">'+(v?fmtK(v):'Sæt target')+'</div></td>';}
+  function attC(val,tgt){if(!tgt)return'<span style="color:var(--t3);font-size:11px">—</span>';var pct=Math.round(val/tgt*100),col=attColor(pct);return'<div style="font-size:11px;font-weight:600;color:'+col+'">'+pct+'%</div><div style="height:4px;background:var(--b);border-radius:2px;margin-top:2px;min-width:50px"><div style="height:100%;border-radius:2px;background:'+col+';width:'+Math.min(pct,100)+'%"></div></div>';}
+  document.getElementById('stbl').innerHTML=tRows.map(function(r){return'<tr><td style="font-weight:500">'+r.name+'</td><td class="r">'+r.wc+'</td><td class="r">'+r.lc+'</td><td class="r">'+fmtK(r.arr)+'</td><td class="r">'+fmtK(r.ot)+'</td>'+tgtC(r.uid,'arr')+'<td class="r">'+attC(r.arr,getT(r.uid,'arr'))+'</td><td class="r">'+(r.wr!==null?r.wr+'%':'—')+'</td><td class="r">'+fmtK(r.pv)+'</td><td class="r">'+r.openCnt+'</td><td class="r">'+(r.avgOpen?fmtK(r.avgOpen):'—')+'</td><td class="r">'+fmtDays(r.leadTime)+'</td><td class="r">'+r.ac+'</td><td class="r">'+(r.acpw!==null?r.acpw:'—')+'</td>'+tgtC(r.uid,'ac')+'</tr>';}).join('');
+  var tA=tRows.reduce(function(s,r){return s+r.arr;},0),tO=tRows.reduce(function(s,r){return s+r.ot;},0),tP=tRows.reduce(function(s,r){return s+r.pv;},0),tW=tRows.reduce(function(s,r){return s+r.wc;},0),tL=tRows.reduce(function(s,r){return s+r.lc;},0),tAc=tRows.reduce(function(s,r){return s+r.ac;},0),tOp=tRows.reduce(function(s,r){return s+r.openCnt;},0),tWR=won.length+lost.length>0?Math.round(won.length/(won.length+lost.length)*100):null;
+  document.getElementById('stblFoot').innerHTML='<td>Total</td><td class="r">'+tW+'</td><td class="r">'+tL+'</td><td class="r">'+fmtK(tA)+'</td><td class="r">'+fmtK(tO)+'</td><td class="r">—</td><td class="r">—</td><td class="r">'+(tWR!==null?tWR+'%':'—')+'</td><td class="r">'+fmtK(tP)+'</td><td class="r">'+tOp+'</td><td class="r">—</td><td class="r">—</td><td class="r">'+tAc+'</td><td class="r">—</td><td class="r">—</td>';
+}
+
+function renderAktiviteter(users,pActs){
+  var tm={};pActs.forEach(function(a){var t=(a.type||'andet').toLowerCase();tm[t]=(tm[t]||0)+1;});
+  var types=Object.keys(tm).sort(function(a,b){return tm[b]-tm[a];}).map(function(t){return[t,tm[t]];});
+  if(charts.aT){charts.aT.destroy();charts.aT=null;}
+  if(types.length){charts.aT=new Chart(document.getElementById('actTypeC'),{type:'bar',data:{labels:types.map(function(t){return t[0];}),datasets:[{data:types.map(function(t){return t[1];}),backgroundColor:'#1D9E75',borderRadius:4,barPercentage:.6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{precision:0}}}}});}
+  var active=users.filter(function(u){return u.active_flag;});
+  var pc=active.map(function(u){return{name:u.name.split(' ')[0],cnt:pActs.filter(function(a){return a.user_id===u.id;}).length};}).filter(function(u){return u.cnt>0;}).sort(function(a,b){return b.cnt-a.cnt;});
+  if(charts.aP){charts.aP.destroy();charts.aP=null;}
+  if(pc.length){charts.aP=new Chart(document.getElementById('actPersonC'),{type:'bar',data:{labels:pc.map(function(u){return u.name;}),datasets:[{data:pc.map(function(u){return u.cnt;}),backgroundColor:'#5DCAA5',borderRadius:4,barPercentage:.6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{precision:0}}}}});}
+  document.getElementById('actTotal').innerHTML='<div style="font-size:42px;font-weight:600;color:var(--g);margin:8px 0 4px">'+pActs.length+'</div><div style="font-size:12px;color:var(--t2);margin-bottom:14px">udførte aktiviteter</div>'+types.slice(0,6).map(function(t){return'<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:.5px solid var(--b)"><span style="color:var(--t2);text-transform:capitalize">'+t[0]+'</span><span style="font-weight:600">'+t[1]+'</span></div>';}).join('');
+  var totC={};ACOLS.forEach(function(c){totC[c]=0;});totC['andet']=0;
+  var rows=active.map(function(u){
+    var my=pActs.filter(function(a){return a.user_id===u.id;});if(!my.length)return'';
+    var c={};my.forEach(function(a){var t=(a.type||'andet').toLowerCase();c[t]=(c[t]||0)+1;});
+    var other=Object.keys(c).filter(function(t){return ACOLS.indexOf(t)<0;}).reduce(function(s,t){return s+c[t];},0);
+    ACOLS.forEach(function(col){totC[col]+=(c[col]||0);});totC['andet']+=other;
+    return'<tr><td style="font-weight:500">'+u.name+'</td>'+ACOLS.map(function(col){return'<td class="r">'+(c[col]||0)+'</td>';}).join('')+'<td class="r">'+other+'</td><td class="r" style="font-weight:600">'+my.length+'</td></tr>';
+  }).join('');
+  document.getElementById('actTbl').innerHTML=rows||'<tr><td colspan="7" style="text-align:center;color:var(--t3);padding:16px">Ingen udførte aktiviteter i perioden</td></tr>';
+  document.getElementById('actFoot').innerHTML='<td>Total</td>'+ACOLS.map(function(col){return'<td class="r">'+totC[col]+'</td>';}).join('')+'<td class="r">'+totC['andet']+'</td><td class="r">'+pActs.length+'</td>';
+}
+
+
+// ── MARKETING — live via Netlify Function ────────────────────────────────
+var mktData = null;
+var mktPrevData = null;
+
+function parseMetaNum(s) {
+  if (!s || s === 'N/A') return 0;
+  return parseFloat(String(s).replace(/[^0-9.]/g,'')) || 0;
+}
+
+function getMetaLeads(d) {
+  if (!d || !d.actions) return 0;
+  var a = d.actions.find(function(x){ return x.action_type==='lead'||x.action_type==='onsite_conversion.lead_grouped'; });
+  return a ? parseInt(a.value)||0 : 0;
+}
+
+async function fetchMetaData(since, until) {
+  // Account level
+  var r = await fetch('/api/meta?since='+since+'&until='+until+'&level=account');
+  var d = await r.json();
+  var acc = d.data && d.data[0] ? d.data[0] : {};
+
+  // Campaign level
+  var r2 = await fetch('/api/meta?since='+since+'&until='+until+'&level=campaign');
+  var d2 = await r2.json();
+  var campaigns = (d2.data||[]).filter(function(c){ return parseMetaNum(c.spend)>0; });
+
+  // Daily trend
+  var r3 = await fetch('/api/meta?since='+since+'&until='+until+'&level=account&time_increment=1');
+  var d3 = await r3.json();
+  var daily = d3.data||[];
+
+  var spend = parseMetaNum(acc.spend);
+  var leads = getMetaLeads(acc);
+  return {
+    spend: spend,
+    impressions: parseInt(acc.impressions)||0,
+    reach: parseInt(acc.reach)||0,
+    clicks: parseInt(acc.clicks)||0,
+    ctr: parseMetaNum(acc.ctr),
+    cpm: parseMetaNum(acc.cpm),
+    cpc: parseMetaNum(acc.cpc),
+    leads: leads,
+    cpl: leads>0 ? Math.round(spend/leads) : 0,
+    campaigns: campaigns.map(function(c){
+      var s=parseMetaNum(c.spend), l=getMetaLeads(c);
+      return {name:c.campaign_name||c.name||'', spend:s, leads:l, cpl:l>0?Math.round(s/l):0,
+              clicks:parseInt(c.clicks)||0, ctr:parseMetaNum(c.ctr), cpm:parseMetaNum(c.cpm), reach:parseInt(c.reach)||0};
+    }),
+    daily: daily.map(function(d){
+      var ds = d.date_start||'';
+      var day = ds ? new Date(ds).getDate()+'. '+['jan','feb','mar','apr','maj','jun','jul','aug','sep','okt','nov','dec'][new Date(ds).getMonth()] : '';
+      return {date:day, spend:Math.round(parseMetaNum(d.spend)), leads:getMetaLeads(d)};
+    })
+  };
+}
+
+async function loadMarketing(dt) {
+  var mktEl = document.getElementById('mktMetrics');
+  if (!mktEl) return;
+  try {
+    var [curr, prev] = await Promise.all([
+      fetchMetaData(dt.s, dt.e),
+      dt.ps ? fetchMetaData(dt.ps, dt.pe) : Promise.resolve(null)
+    ]);
+    mktData = curr;
+    mktPrevData = prev;
+    renderMarketing();
+  } catch(e) {
+    console.warn('Meta fetch failed:', e);
+    if (mktEl) mktEl.innerHTML = '<div class="metric"><div class="mlbl">Meta Ads</div><div class="mval" style="font-size:13px;color:var(--t3)">Kunne ikke hente data</div><div class="mnote">'+e.message+'</div></div>';
+  }
+}
+
+function renderMarketing() {
+  var c=mktData, p=mktPrevData;
+  if (!c) return;
+  function mktDelta(cv,pv,invert) {
+    if(!isPop()||!pv||pv===0) return '';
+    // For cost metrics (spend, CPL, CPM), lower is better
+    var pct=Math.round((cv-pv)/pv*100);
+    var good = invert ? pct<=0 : pct>=0;
+    var col = good ? 'var(--gd)' : 'var(--red)';
+    return '<div class="mdelta" style="color:'+col+'">'+(pct>=0?'↑':'↓')+Math.abs(pct)+'% vs '+p.period+'</div>';
+  }
+  var items = [
+    {l:'Spend (DKK)',    v:fmtK(c.spend),      d:mktDelta(c.spend,p.spend,true)},
+    {l:'Leads',         v:String(c.leads),     d:mktDelta(c.leads,p.leads,false)},
+    {l:'CPL (DKK)',     v:fmtK(c.cpl),         d:mktDelta(c.cpl,p.cpl,true)},
+    {l:'CTR',           v:c.ctr.toFixed(2)+'%',d:mktDelta(c.ctr,p.ctr,false)},
+    {l:'Reach',         v:fmtK(c.reach),       d:mktDelta(c.reach,p.reach,false)},
+    {l:'CPM (DKK)',     v:fmtK(c.cpm),         d:mktDelta(c.cpm,p.cpm,true)}
+  ];
+  document.getElementById('mktMetrics').innerHTML = items.map(function(it){
+    return '<div class="metric"><div class="mlbl">'+it.l+'</div><div class="mval">'+it.v+'</div>'+it.d+'</div>';
+  }).join('');
+
+  // Trend chart
+  if(charts.mktT){charts.mktT.destroy();charts.mktT=null;}
+  charts.mktT = new Chart(document.getElementById('mktTrendC'),{
+    type:'bar',
+    data:{
+      labels: c.daily.map(function(d){return d.date;}),
+      datasets:[
+        {label:'Spend (DKK)', data:c.daily.map(function(d){return d.spend;}),
+         backgroundColor:'#185FA5', borderRadius:3, barPercentage:.6, yAxisID:'y'},
+        {label:'Leads', data:c.daily.map(function(d){return d.leads;}),
+         type:'line', borderColor:'#1D9E75', backgroundColor:'transparent',
+         pointBackgroundColor:'#1D9E75', tension:.3, yAxisID:'y2', borderWidth:2, pointRadius:4}
+      ]
+    },
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{ticks:{font:{size:10}}},
+        y:{ticks:{callback:function(v){return fmtS(v)+' kr';}}, title:{display:true,text:'Spend',font:{size:9},color:'var(--t3)'}},
+        y2:{position:'right',min:0,ticks:{precision:0},grid:{drawOnChartArea:false},title:{display:true,text:'Leads',font:{size:9},color:'var(--t3)'}}
+      }}
+  });
+
+  // Campaign table
+  var rows = c.campaigns.map(function(c){
+    return '<tr><td style="font-weight:500">'+c.name+'</td>'+
+      '<td class="r">'+fmtK(c.spend)+'</td>'+
+      '<td class="r">'+c.leads+'</td>'+
+      '<td class="r">'+fmtK(c.cpl)+'</td>'+
+      '<td class="r">'+fmtK(c.clicks)+'</td>'+
+      '<td class="r">'+c.ctr.toFixed(2)+'%</td>'+
+      '<td class="r">'+fmtK(c.cpm)+'</td>'+
+      '<td class="r">'+fmtK(c.reach)+'</td></tr>';
+  }).join('');
+  document.getElementById('mktCampTbl').innerHTML = rows;
+  var totSpend=c.campaigns.reduce(function(s,c){return s+c.spend;},0);
+  var totLeads=c.campaigns.reduce(function(s,c){return s+c.leads;},0);
+  var totClicks=c.campaigns.reduce(function(s,c){return s+c.clicks;},0);
+  var totReach=c.campaigns.reduce(function(s,c){return s+c.reach;},0);
+  document.getElementById('mktCampFoot').innerHTML=
+    '<td>Total</td><td class="r">'+fmtK(totSpend)+'</td><td class="r">'+totLeads+'</td>'+
+    '<td class="r">'+fmtK(Math.round(totSpend/totLeads))+'</td>'+
+    '<td class="r">'+fmtK(totClicks)+'</td><td class="r">—</td><td class="r">—</td>'+
+    '<td class="r">'+fmtK(totReach)+'</td>';
+}
+
+function switchMktTab(tab,el){
+  document.querySelectorAll('#mktTabs .tab').forEach(function(t){t.classList.remove('on');});
+  el.classList.add('on');
+  document.getElementById('mkt-trend').style.display = tab==='trend'?'':'none';
+  document.getElementById('mkt-kampagner').style.display = tab==='kampagner'?'':'none';
+  if(tab==='trend') setTimeout(function(){renderMarketing();},50);
+}
+
+function switchTab(tab,el){
+  document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('on');});
+  el.classList.add('on');
+  ['pipeline','saelgere','aktiviteter'].forEach(function(t){document.getElementById('tab-'+t).style.display=t===tab?'':'none';});
+}
+</script>
+</body>
+</html>
