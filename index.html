@@ -400,10 +400,10 @@ function render(){
   var pipePrev=dt.ps?deals.filter(function(d){return isValid(sm[d.stage_id])&&activeInPeriod(d,dt.ps,dt.pe);}):[];
   var newPipe=deals.filter(function(d){var st=sm[d.stage_id];return st&&isMain(st)&&!isExcl(st.name)&&inR(d.add_time,dt.s,dt.e);});
   var newPipeP=dt.ps?deals.filter(function(d){var st=sm[d.stage_id];return st&&isMain(st)&&!isExcl(st.name)&&inR(d.add_time,dt.ps,dt.pe);}):[];
-  var won=deals.filter(function(d){return d.status==='won'&&(inR(d.won_time,dt.s,dt.e)||inR(d.close_time,dt.s,dt.e))&&isValid(sm[d.stage_id]);});
-  var wonP=dt.ps?deals.filter(function(d){return d.status==='won'&&(inR(d.won_time,dt.ps,dt.pe)||inR(d.close_time,dt.ps,dt.pe))&&isValid(sm[d.stage_id]);}):[];
-  var lost=deals.filter(function(d){return d.status==='lost'&&inR(d.lost_time,dt.s,dt.e)&&isValid(sm[d.stage_id]);});
-  var lostP=dt.ps?deals.filter(function(d){return d.status==='lost'&&inR(d.lost_time,dt.ps,dt.pe)&&isValid(sm[d.stage_id]);}):[];
+  var won=deals.filter(function(d){var st=sm[d.stage_id];return d.status==='won'&&(inR(d.won_time,dt.s,dt.e)||inR(d.close_time,dt.s,dt.e))&&st&&isMain(st)&&!isExcl(st.name);});
+  var wonP=dt.ps?deals.filter(function(d){var st=sm[d.stage_id];return d.status==='won'&&(inR(d.won_time,dt.ps,dt.pe)||inR(d.close_time,dt.ps,dt.pe))&&st&&isMain(st)&&!isExcl(st.name);}):[];
+  var lost=deals.filter(function(d){var st=sm[d.stage_id];return d.status==='lost'&&inR(d.lost_time,dt.s,dt.e)&&st&&isMain(st)&&!isExcl(st.name);});
+  var lostP=dt.ps?deals.filter(function(d){var st=sm[d.stage_id];return d.status==='lost'&&inR(d.lost_time,dt.ps,dt.pe)&&st&&isMain(st)&&!isExcl(st.name);}):[];
   var pActs=acts.filter(function(a){return inR(actDate(a),dt.s,dt.e);});
   var pActsP=dt.ps?acts.filter(function(a){return inR(actDate(a),dt.ps,dt.pe);}):[];
 
